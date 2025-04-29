@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unificador de HTML em PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #eef1f5;
+      margin: 0;
+      padding: 40px 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      text-align: center;
+      position: relative;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 10px;
+      max-height: 80px;
+    }
+    h1 {
+      margin-bottom: 30px;
+      color: #0d47a1;
+      font-size: 26px;
+    }
+    .upload-label {
+      display: block;
+      margin: 0 auto 20px;
+      padding: 25px;
+      border: 2px dashed #90caf9;
+      border-radius: 10px;
+      background-color: #f0f8ff;
+      color: #0d47a1;
+      max-width: 500px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .ordenacao-group, .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 30px;
+      margin-bottom: -20px;
+    }
+    .ordenacao-group button, .button-group button {
+      background-color: #0d47a1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 15px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      min-width: 240px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ordenacao-group button:hover, .button-group button:hover {
+      background-color: #1565c0;
+    }
+    #lista-arquivos {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+      max-width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+    #lista-arquivos ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #lista-arquivos li {
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #d6e0eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      cursor: move;
+    }
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-grow: 1;
+    }
+    .file-info span {
+      font-weight: bold;
+      color: #333;
+    }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #d32f2f;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-content {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      min-width: 320px;
+    }
+    .mini-spinner {
+      width: 16px;
+      height: 16px;
+      border: 3px solid #ccc;
+      border-top: 3px solid #1565c0;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .pulsando {
+  animation: fade 1.8s ease-in-out infinite;
+  color: #0d47a1;
+  font-weight: bold;
+}
+
+@keyframes fade {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+    .alerta {
+      font-size: 14px;
+      color: #c62828;
+      margin-bottom: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .processando-linha {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    #barra-progresso {
+      width: 100%;
+      background: #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      margin-top: 20px;
+    }
+    #barra-progresso-inner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #42a5f5, #1e88e5, #1565c0);
+      background-size: 200% 100%;
+      animation: progressoAnimado 1.5s linear infinite;
+    }
+    @keyframes progressoAnimado {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    @media (max-width: 480px) {
+  .ordenacao-group button,
+  .button-group button {
+    min-width: unset;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 20px 15px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .upload-label {
+    padding: 16px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://i.ibb.co/svmH3d35/Logomarca.png" alt="Logomarca" class="logo">
+    <h1>Unificador de HTML em PDF</h1>
+    <label for="arquivosHtml" class="upload-label">Escolha ou arraste seus arquivos HTML aqui</label>
+    <input type="file" id="arquivosHtml" accept=".html,.htm" multiple>
+    <div id="lista-arquivos"><ul id="sortable"></ul></div>
+    <div class="ordenacao-group">
+      <button onclick="ordenarPorNome()">🔤 Ordenar por Nome</button>
+      <button onclick="ordenarPorData()">📅 Ordenar por Data</button>
+    </div>
+    <div class="button-group">
+      <button onclick="gerarPDF()">📄 Gerar PDF</button>
+      <button onclick="limparConteudo()">🧹 Limpar</button>
+    </div>
+  </div>
+
+  <div id="modal">
+    <div id="modal-content">
+      <div class="alerta">⚠️ Permaneça nessa página para concluir o processo.</div>
+      <div class="processando-linha">
+        <div class="mini-spinner"></div>
+        <h3 class="pulsando">Processando arquivos...</h3>
+      </div>
+      <div id="barra-progresso">
+        <div id="barra-progresso-inner"></div>
+      </div>
+      <button onclick="cancelarGeracao()" style="margin-top: 20px; background: #e53935; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+         Cancelar
+      </button>    
+    </div>
+  </div>
+
+  <script>
+    let cancelarProcessamento = false;
+    let arquivosSelecionados = [];
+    const input = document.getElementById('arquivosHtml');
+    const lista = document.getElementById('sortable');
+    const modal = document.getElementById('modal');
+    const barraProgressoInner = document.getElementById('barra-progresso-inner');
+
+    input.addEventListener('change', () => {
+      const novosArquivos = Array.from(input.files);
+      arquivosSelecionados = arquivosSelecionados.concat(novosArquivos);
+      atualizarLista();
+    });
+
+    function atualizarLista() {
+      lista.innerHTML = '';
+      arquivosSelecionados.forEach((file, index) => {
+        const item = document.createElement('li');
+        item.setAttribute('data-index', index);
+        item.innerHTML = `<div class="file-info"><span>${index + 1}.</span> ${file.name}</div> <button class="remove-btn" onclick="removerArquivo(${index})">✕</button>`;
+        lista.appendChild(item);
+      });
+      atualizarNumeracao();
+    }
+
+    function atualizarNumeracao() {
+      const itens = lista.querySelectorAll('li');
+      itens.forEach((li, i) => {
+        const span = li.querySelector('span');
+        span.textContent = `${i + 1}.`;
+      });
+    }
+
+    function ordenarPorNome() {
+      arquivosSelecionados.sort((a, b) => a.name.localeCompare(b.name));
+      atualizarLista();
+    }
+
+    function ordenarPorData() {
+      arquivosSelecionados.sort((a, b) => (a.lastModified || 0) - (b.lastModified || 0));
+      atualizarLista();
+    }
+
+    function removerArquivo(index) {
+      arquivosSelecionados.splice(index, 1);
+      atualizarLista();
+    }
+
+    async function gerarPDF() {
+      cancelarProcessamento = false;
+
+      if (!arquivosSelecionados.length) {
+        alert('Selecione arquivos HTML');
+        return;
+      }
+
+      modal.style.display = 'flex';
+      barraProgressoInner.style.width = '0%';
+
+      const jsPDF = window.jspdf.jsPDF;
+      const pdf = new jsPDF();
+
+      const itensOrdenados = Array.from(lista.children);
+      const arquivosOrdenados = itensOrdenados.map(li => arquivosSelecionados[parseInt(li.getAttribute('data-index'))]);
+
+      for (let i = 0; i < arquivosOrdenados.length; i++) {
+        if (cancelarProcessamento) {
+          modal.style.display = 'none';
+          return;
+        }
+
+        const texto = await arquivosOrdenados[i].text();
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '794px';
+        iframe.style.height = '1123px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        document.body.appendChild(iframe);
+
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(texto);
+        iframe.contentDocument.close();
+
+        await new Promise(resolve => {
+          iframe.onload = () => resolve();
+          setTimeout(resolve, 500);
+        });
+
+        const canvas = await html2canvas(iframe.contentDocument.body, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = 210;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+        document.body.removeChild(iframe);
+        barraProgressoInner.style.width = `${Math.round(((i + 1) / arquivosOrdenados.length) * 100)}%`;
+      }
+
+      if (cancelarProcessamento) return;
+
+      pdf.save('documento_unificado.pdf');
+
+      modal.innerHTML = `
+        <div id="modal-content">
+          <h3 style="color: #2e7d32;">✅ PDF gerado com sucesso!</h3>
+        </div>`;
+
+      setTimeout(() => {
+        modal.style.display = 'none';
+        modal.innerHTML = `
+          <div id="modal-content">
+            <div class="alerta">⚠️ Permaneça nessa página para concluir o processo.</div>
+            <div class="processando-linha">
+              <div class="mini-spinner"></div>
+              <h3 class="pulsando">Processando arquivos...</h3>
+            </div>
+            <div id="barra-progresso">
+              <div id="barra-progresso-inner"></div>
+            </div>
+            <button onclick="cancelarGeracao()" style="margin-top: 20px; background: #e53935; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+               Cancelar
+            </button>
+          </div>`;
+      }, 1500);
+    }
+
+    function cancelarGeracao() {
+      cancelarProcessamento = true;
+      modal.style.display = 'none';
+    }
+
+    function limparConteudo() {
+      arquivosSelecionados = [];
+      atualizarLista();
+    }
+
+    const label = document.querySelector('.upload-label');
+    label.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      label.style.backgroundColor = '#e3f2fd';
+    });
+    label.addEventListener('dragleave', () => {
+      label.style.backgroundColor = '#f0f8ff';
+    });
+    label.addEventListener('drop', (e) => {
+      e.preventDefault();
+      label.style.backgroundColor = '#f0f8ff';
+      const novosArquivos = Array.from(e.dataTransfer.files);
+      arquivosSelecionados = arquivosSelecionados.concat(novosArquivos);
+      atualizarLista();
+    });
+
+    new Sortable(lista, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: () => atualizarNumeracao()
+    });
+
+    window.addEventListener('keydown', function (e) {
+      if (modal.style.display === 'flex') {
+        e.preventDefault();
+      }
+    }, true);
+  </script>
+</body>
+</html>
